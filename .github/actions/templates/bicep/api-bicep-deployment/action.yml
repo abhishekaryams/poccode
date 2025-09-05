@@ -75,7 +75,7 @@ runs:
         name: "${{ env.utcNow }}-${{ inputs.description }}-validate-${{ inputs.AZURE_ENVIRONMENT }}"
         scope: resourceGroup
         resource-group-name: ${{inputs.resource_group_name}}
-        subscription-id: ${{ inputs.AZURE_SUBSCRIPTION_ID }}
+        subscription-id: '617e0f32-114b-4369-a2af-015ee7987a54' #${{ inputs.AZURE_SUBSCRIPTION_ID }}
         template-file: ${{ inputs.BICEP_FILE }}
         parameters-file: ${{ inputs.BICEP_PARAMETER_FILE }}
         parameters: |
