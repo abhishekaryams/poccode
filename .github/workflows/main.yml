@@ -1,0 +1,199 @@
+name: Deploy Azure Resources for File Transfer Pattern
+
+on:
+  workflow_dispatch:
+  #checkov:skip=CKV_GHA_7
+    inputs:
+      environment:
+        description: 'Select the environment to deploy'
+        required: true
+        type: choice
+        options:
+          - innovation
+          - dev
+        default: dev
+
+      DEPLOY_MODE:
+        description: "Specify the deployment mode: 'whatif' or 'create'."
+        required: true
+        type: choice
+        options:
+          - whatif
+          - whatifandcreate
+        default: whatif
+     
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AZURE_LOCATION: "germanywestcentral"
+  SC_BICEP_FILE: "orchestration/security/main.bicep"
+  API_BICEP_FILE: "orchestration/security/apiconnections.bicep"
+jobs:
+  deploy_dev:
+    name: Deploy to Dev
+    runs-on: ubuntu-latest
+    environment: DEV   
+    if: ${{ github.event.inputs.environment == 'DEV' }}
+    steps:
+       - name: Checkout
+         uses: actions/checkout@v4 
+     
+      #  - name: Deploy Security Resources 
+      #    uses: ./.github/actions/templates/bicep/security-bicep-deployment
+      #    id: 'securitydeployment'
+      #    with:
+      #     AZURE_ENVIRONMENT: DEV
+      #     DEPLOY_MODE: ${{ inputs.DEPLOY_MODE }}
+      #     AZURE_LOCATION: ${{ env.AZURE_LOCATION }}
+      #     BICEP_FILE: ${{ env.SC_BICEP_FILE}}
+      #     BICEP_PARAMETER_FILE: "orchestration/security/dev.main.bicepparam"
+      #     DESCRIPTION: "security-infrastructure"
+      #     AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      #     AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID}}
+      #     AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID}}
+
+       - name: Print Principal ID
+         if: ${{ inputs.DEPLOY_MODE == 'whatifandcreate' }}
+         run: echo "userAssignedIdentityPrincipalId is ${{ steps.securitydeployment.outputs.userAssignedIdentityPrincipalId }}"
+
+       - name: Deploy API Connections 
+         uses: ./.github/actions/templates/bicep/api-bicep-deployment
+         id: 'apideployment'
+         if: ${{ inputs.DEPLOY_MODE == 'whatifandcreate' }}
+         with:
+          AZURE_ENVIRONMENT: Dev
+          DEPLOY_MODE: ${{ inputs.DEPLOY_MODE }}
+          AZURE_LOCATION: ${{ env.AZURE_LOCATION }}
+          BICEP_FILE: ${{ env.API_BICEP_FILE}}
+          BICEP_PARAMETER_FILE: "orchestration/security/dev.apiconnections.bicepparam"
+          DESCRIPTION: "security-infrastructure"
+          resource_group_name: 'pxs-azure-pdt-dev-rg'
+          # userAssignedIdentityPrincipalId: ${{ steps.securitydeployment.outputs.userAssignedIdentityPrincipalId }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID}}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID}}
+
+      #  - name: Get connection runtime URL
+      #   #  if: ${{ inputs.DEPLOY_MODE == 'whatifandcreate' }}
+      #    shell: pwsh
+      #    run: |
+      #      $connectionazureblob = az resource show --resource-group 'pxs-azure-pdt-dev-rg' --name 'azureblob' --resource-type 'Microsoft.Web/connections' --query properties --output json | ConvertFrom-Json
+      #      $connectionRuntimeUrlazureblob = $connectionazureblob.connectionRuntimeUrl
+      #      Write-Host "Connection Runtime URL: $connectionRuntimeUrlazureblob"
+      #      echo "CONNECTION_RUNTIME_URL_AZUREBLOB=$connectionRuntimeUrlazureblob" >> $GITHUB_ENV
+                   
+
+      #  - name: Create Workflow Package
+      #    shell: pwsh
+      #    run: |
+      #      echo "Creating workflow package for multiple workflows with parameters..."
+      #      $connectionazureblob = az resource show --resource-group 'pxs-azure-pdt-dev-rg' --name 'azureblob' --resource-type 'Microsoft.Web/connections' --output json | ConvertFrom-Json
+      #      $connectionRuntimeUrlazureblob = $connectionazureblob.properties.connectionRuntimeUrl
+      #      mkdir -p workflow-package
+      #      echo $connectionRuntimeUrlazureblob
+
+      #      $connectionsJson = @"
+      #      {
+      #            "managedApiConnections": {
+      #                "azureblob": {
+      #                    "api": {
+      #                        "id": "/subscriptions/e0f7b10a-4a5c-4a5a-856b-0505f1a09fff/providers/Microsoft.Web/locations/westeurope/managedApis/azureblob"
+      #                    },
+      #                    "authentication": {
+      #                        "identity": "/subscriptions/e0f7b10a-4a5c-4a5a-856b-0505f1a09fff/resourcegroups/pxs-azure-pdt-dev-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/pxs-azure-pdt-dev-gwc-id1",
+      #                        "type": "ManagedServiceIdentity"
+      #                    },
+      #                    "connection": {
+      #                        "id": "/subscriptions/e0f7b10a-4a5c-4a5a-856b-0505f1a09fff/resourceGroups/pxs-azure-pdt-dev-rg/providers/Microsoft.Web/connections/azureblob"
+      #                    },
+      #                    "connectionProperties": {
+      #                        "authentication": {
+      #                            "identity": "/subscriptions/e0f7b10a-4a5c-4a5a-856b-0505f1a09fff/resourcegroups/pxs-azure-pdt-dev-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/pxs-azure-pdt-dev-gwc-id1",
+      #                            "audience": "https://storage.azure.com/",
+      #                            "type": "ManagedServiceIdentity"
+      #                        }
+      #                    },
+      #                    "connectionRuntimeUrl": "$connectionRuntimeUrlazureblob"
+      #                }
+      #            },
+      #            "serviceProviderConnections": {}
+      #        }
+      #      "@
+      #      Set-Content -Path "LogicAppWorkflow/connections.json" -Value $connectionsJson
+           
+      #        Copy-Item -Path "LogicAppWorkflow\*" -Destination "workflow-package" -Recurse -Force -ErrorAction SilentlyContinue
+      #        Copy-Item -Path "host.json" -Destination "workflow-package" -Force -ErrorAction SilentlyContinue
+
+      #        Write-Host "Workflows found:"
+      #        $workflowFiles = Get-ChildItem -Path "workflow-package" -Filter "workflow.json" -Recurse
+      #        foreach ($workflow in $workflowFiles) {
+      #          $workflow_name = Split-Path $workflow.DirectoryName -Leaf
+      #          Write-Host "  - $workflow_name"
+      #          $workflowContent = Get-Content $workflow.FullName -Raw
+      #          if ($workflowContent -match '"parameters"') {
+      #            Write-Host "    └── Has parameters defined"
+      #          }
+      #        }
+
+      #        if (Test-Path "workflow-package/parameters.json") {
+      #          Write-Host "✓ Workflow parameters file found"
+      #        }
+      #        if (Test-Path "workflow-package/appsettings.json") {
+      #          Write-Host "✓ Application settings file found"
+      #        }
+
+      #        $workflow_count = $workflowFiles.Count
+      #        Write-Host "Total workflows found: $workflow_count"
+      #        if ($workflow_count -eq 0) {
+      #          Write-Host "ERROR: No workflows found!"
+      #          exit 1
+      #        }
+
+      #        Push-Location "workflow-package"
+      #        Compress-Archive -Path * -DestinationPath "../workflow-package.zip" -Force
+      #        Pop-Location
+      #        Write-Host "Workflow package created successfully"
+      #        try {
+      #          $zip = [System.IO.Compression.ZipFile]::OpenRead("workflow-package.zip")
+      #          foreach ($entry in $zip.Entries) {
+      #            Write-Host $entry.FullName
+      #          }
+      #          $zip.Dispose()
+      #        } catch {
+      #          Write-Host "Could not list contents of workflow-package.zip"
+      #        }
+
+      #  - name: Deploy Workflow to Logic App
+      #    run: |
+      #     LOGIC_APP_NAME=$(jq -r '.logicAppName.value' parameters.json)
+      #     if [ -z "$LOGIC_APP_NAME" ] || [ "$LOGIC_APP_NAME" = "null" ]; then
+      #       echo "Logic App name not found in parameters.json"
+      #       exit 1
+      #     fi
+      #     echo "Logic App Name: $LOGIC_APP_NAME"
+
+      #     az webapp deploy \
+      #       --resource-group 'pxs-azure-pdt-dev-rg' \
+      #       --name $LOGIC_APP_NAME \
+      #       --src-path workflow-package.zip \
+      #       --type zip \
+      #       --async false
+
+      #     echo "Workflow deployment completed successfully"
+
+
+
+      #  - name: Deploy Logic App Consumption workflow to remove malware
+      #    if: ${{ inputs.DEPLOY_MODE == 'whatifandcreate' }}
+      #    id: consumptionworkflow-removeMalware
+      #    shell: pwsh
+      #    run: |
+      #       pwsh ./.github/workflows/workflowconsumption.ps1
+      
+
+
+
+
