@@ -29,6 +29,7 @@ inputs:
   AZURE_SUBSCRIPTION_ID:
     description: "Az Auth: Azure subscription ID"
     required: true
+    default: "617e0f32-114b-4369-a2af-015ee7987a54"
   DEPLOY_MODE:
     description: "Specify the deployment mode: 'whatif' or 'whatifandcreate'."
     required: true
@@ -44,15 +45,15 @@ runs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    # - name: Check if Bicep parameter file exists
-    #   shell: bash
-    #   run: |
-    #     if [ -f "${{ inputs.BICEP_PARAMETER_FILE }}" ]; then
-    #       echo "Bicep parameter file '${{ inputs.BICEP_PARAMETER_FILE }}' exists. Proceeding with workflow."
-    #     else
-    #       echo "Bicep parameter file '${{ inputs.BICEP_PARAMETER_FILE }}' does not exist. Stopping workflow."
-    #       exit 1
-    #     fi
+    - name: Check if Bicep parameter file exists
+      shell: bash
+      run: |
+        if [ -f "${{ inputs.BICEP_PARAMETER_FILE }}" ]; then
+          echo "Bicep parameter file '${{ inputs.BICEP_PARAMETER_FILE }}' exists. Proceeding with workflow."
+        else
+          echo "Bicep parameter file '${{ inputs.BICEP_PARAMETER_FILE }}' does not exist. Stopping workflow."
+          exit 1
+        fi
 
     - name: Generate Timestamp
       shell: bash
@@ -75,7 +76,7 @@ runs:
         name: "${{ env.utcNow }}-${{ inputs.description }}-validate-${{ inputs.AZURE_ENVIRONMENT }}"
         scope: resourceGroup
         resource-group-name: ${{inputs.resource_group_name}}
-        subscription-id: '617e0f32-114b-4369-a2af-015ee7987a54' #${{ inputs.AZURE_SUBSCRIPTION_ID }}
+        subscription-id: ${{ inputs.AZURE_SUBSCRIPTION_ID }}
         template-file: ${{ inputs.BICEP_FILE }}
         parameters-file: ${{ inputs.BICEP_PARAMETER_FILE }}
         parameters: |
