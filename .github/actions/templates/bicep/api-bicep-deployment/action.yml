@@ -77,9 +77,11 @@ runs:
         resource-group-name: ${{inputs.resource_group_name}}
         subscription-id: ${{ inputs.AZURE_SUBSCRIPTION_ID }}
         template-file: ${{ inputs.BICEP_FILE }}
+        parameters-file: ${{ inputs.BICEP_PARAMETER_FILE }}
         parameters: |
-          @${{ inputs.BICEP_PARAMETER_FILE }}
-          userAssignedIdentityPrincipalId=${{ inputs.userAssignedIdentityPrincipalId }}
+          {
+            "userAssignedIdentityPrincipalId": "${{ inputs.userAssignedIdentityPrincipalId }}"
+          }
     # - name: Deploy Bicep File (What-If)
     #   if: ${{ inputs.DEPLOY_MODE == 'whatif' || inputs.DEPLOY_MODE == 'whatifandcreate' }}
     #   uses: azure/bicep-deploy@v2
