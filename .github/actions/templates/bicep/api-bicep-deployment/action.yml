@@ -1,0 +1,117 @@
+name: Deploy Bicep
+description: Composite action to validate and deploy Bicep files to Azure.
+
+inputs:
+  AZURE_ENVIRONMENT:
+    required: true
+    description: "The Azure environment to deploy the Bicep file to."
+  AZURE_LOCATION:
+    required: true
+    description: "The Azure location to deploy the Bicep file to."
+  BICEP_FILE:
+    required: true
+    description: "The path to the Bicep file to deploy."
+  BICEP_PARAMETER_FILE:
+    required: true
+    description: "The path to the Bicep parameter file to use."
+  description:
+    required: true
+    description: "A description of the deployment to form deployment name."
+  resource_group_name:
+      required: true
+      description: "The name of the resource group to deploy the Bicep file to."
+  AZURE_CLIENT_ID:
+    description: "Az Auth: Azure client ID"
+    required: true
+  AZURE_TENANT_ID:
+    description: "Az Auth: Azure tenant ID"
+    required: true
+  AZURE_SUBSCRIPTION_ID:
+    description: "Az Auth: Azure subscription ID"
+    required: true
+  DEPLOY_MODE:
+    description: "Specify the deployment mode: 'whatif' or 'whatifandcreate'."
+    required: true
+  userAssignedIdentityPrincipalId:
+    description: "The principal ID of the user assigned managed identity to be used for authentication."
+    required: true
+    default: "123g"
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    # - name: Check if Bicep parameter file exists
+    #   shell: bash
+    #   run: |
+    #     if [ -f "${{ inputs.BICEP_PARAMETER_FILE }}" ]; then
+    #       echo "Bicep parameter file '${{ inputs.BICEP_PARAMETER_FILE }}' exists. Proceeding with workflow."
+    #     else
+    #       echo "Bicep parameter file '${{ inputs.BICEP_PARAMETER_FILE }}' does not exist. Stopping workflow."
+    #       exit 1
+    #     fi
+
+    - name: Generate Timestamp
+      shell: bash
+      id: timestamp
+      run: |
+        echo "utcNow=$(date -u +'%Y%m%dT%H%M%SZ')" >> $GITHUB_ENV
+
+    # - name: Azure Login with OIDC
+    #   uses: azure/login@v2
+    #   with:
+    #     client-id: ${{ inputs.AZURE_CLIENT_ID }}
+    #     tenant-id: ${{ inputs.AZURE_TENANT_ID }}
+    #     subscription-id: ${{ inputs.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Validate Bicep File
+      uses: azure/bicep-deploy@v2
+      with:
+        type: deployment
+        operation: validate
+        name: "${{ env.utcNow }}-${{ inputs.description }}-validate-${{ inputs.AZURE_ENVIRONMENT }}"
+        scope: resourceGroup
+        resource-group-name: ${{inputs.resource_group_name}}
+        subscription-id: ${{ inputs.AZURE_SUBSCRIPTION_ID }}
+        template-file: ${{ inputs.BICEP_FILE }}
+        parameters: |
+          @${{ inputs.BICEP_PARAMETER_FILE }}
+          userAssignedIdentityPrincipalId: ${{ inputs.userAssignedIdentityPrincipalId }}
+        # parameters-file: ${{ inputs.BICEP_PARAMETER_FILE }}
+        
+       # location: ${{ inputs.AZURE_LOCATION }}
+
+    # - name: Deploy Bicep File (What-If)
+    #   if: ${{ inputs.DEPLOY_MODE == 'whatif' || inputs.DEPLOY_MODE == 'whatifandcreate' }}
+    #   uses: azure/bicep-deploy@v2
+    #   with:
+    #     type: deployment
+    #     operation: whatIf
+    #     name: "${{ env.utcNow }}-${{ inputs.description }}-${{ inputs.AZURE_ENVIRONMENT }}"
+    #     scope: resourceGroup
+    #     resource-group-name: ${{inputs.resource_group_name}}
+    #     subscription-id: ${{  inputs.azure_subscription_id  }}
+    #     template-file: ${{ inputs.BICEP_FILE }}
+    #     parameters:
+    #       userAssignedIdentityPrincipalId: ${{ inputs.userAssignedIdentityPrincipalId }}
+    #     parameters-file: ${{ inputs.BICEP_PARAMETER_FILE }}
+    #     #location: ${{ inputs.AZURE_LOCATION }}
+
+    # - name: Deploy Bicep File (Create)
+    #   if: ${{ inputs.DEPLOY_MODE == 'whatifandcreate' }}
+    #   uses: azure/bicep-deploy@v2
+    #   with:
+    #     type: deployment
+    #     operation: create
+    #     name: "${{ env.utcNow }}-${{ inputs.description }}-${{ inputs.AZURE_ENVIRONMENT }}"
+    #     scope: resourceGroup
+    #     resource-group-name: ${{inputs.resource_group_name}}
+    #     subscription-id: ${{  inputs.azure_subscription_id  }}
+    #     template-file: ${{ inputs.BICEP_FILE }}
+    #     parameters:
+    #       userAssignedIdentityPrincipalId: ${{ inputs.userAssignedIdentityPrincipalId }}
+    #     parameters-file: ${{ inputs.BICEP_PARAMETER_FILE }}
+    #    # location: ${{ inputs.AZURE_LOCATION }}
