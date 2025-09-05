@@ -62,7 +62,7 @@ jobs:
        - name: Deploy API Connections 
          uses: ./.github/actions/templates/bicep/api-bicep-deployment
          id: 'apideployment'
-         if: ${{ inputs.DEPLOY_MODE == 'whatifandcreate' }}
+         # if: ${{ inputs.DEPLOY_MODE == 'whatifandcreate' }}
          with:
           AZURE_ENVIRONMENT: Dev
           DEPLOY_MODE: ${{ inputs.DEPLOY_MODE }}
@@ -71,7 +71,7 @@ jobs:
           BICEP_PARAMETER_FILE: "orchestration/security/dev.apiconnections.bicepparam"
           DESCRIPTION: "security-infrastructure"
           resource_group_name: 'pxs-azure-pdt-dev-rg'
-          # userAssignedIdentityPrincipalId: ${{ steps.securitydeployment.outputs.userAssignedIdentityPrincipalId }}
+          userAssignedIdentityPrincipalId: 'dummyid'#${{ steps.securitydeployment.outputs.userAssignedIdentityPrincipalId }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID}}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID}}
