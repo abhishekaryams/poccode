@@ -79,11 +79,7 @@ runs:
         template-file: ${{ inputs.BICEP_FILE }}
         parameters: |
           @${{ inputs.BICEP_PARAMETER_FILE }}
-          userAssignedIdentityPrincipalId: ${{ inputs.userAssignedIdentityPrincipalId }}
-        # parameters-file: ${{ inputs.BICEP_PARAMETER_FILE }}
-        
-       # location: ${{ inputs.AZURE_LOCATION }}
-
+          userAssignedIdentityPrincipalId=${{ inputs.userAssignedIdentityPrincipalId }}
     # - name: Deploy Bicep File (What-If)
     #   if: ${{ inputs.DEPLOY_MODE == 'whatif' || inputs.DEPLOY_MODE == 'whatifandcreate' }}
     #   uses: azure/bicep-deploy@v2
